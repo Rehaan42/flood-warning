@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Assam Flood Early-Warning</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
+<style>
+:root{
+  --bg:#f3f6f9; --card:#ffffff; --ink:#14212b; --muted:#5a6b78; --line:#d5dee6;
+  --brand:#0b5fd6; --water:#2b8fd9; --water-deep:#1b6fb0;
+  --green:#2e7d32; --yellow:#ffc107; --yellow-ink:#1a1a1a; --red:#c62828;
+  --pop:#ff6d00; --pop-border:#e65100;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1820; --card:#18242e; --ink:#eaf1f6; --muted:#9db0bf; --line:#2b3b48;
+    --brand:#4d94ff; --water:#3a9be6; --water-deep:#256fa8; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1820; --card:#18242e; --ink:#eaf1f6; --muted:#9db0bf; --line:#2b3b48;
+  --brand:#4d94ff; --water:#3a9be6; --water-deep:#256fa8; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+main{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.4rem;margin:0 0 2px}
+.sub{color:var(--muted);font-size:.85rem;margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
+.stat small{display:block;color:var(--muted);font-size:.8rem}
+.stat b{display:block;font-size:2rem;line-height:1.2}
+.stat span{color:var(--muted);font-size:.85rem}
+.note{font-size:.8rem;color:var(--muted);margin:10px 0 0;display:flex;gap:6px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;background:#ff6d00;flex:none}
+.viz{display:flex;gap:14px;align-items:center}
+.viz svg{flex:none}
+.viz p{margin:0;font-size:.9rem;color:var(--muted)}
+label{display:block;font-weight:600;margin-bottom:6px}
+.hint{font-weight:400;color:var(--muted);font-size:.82rem;display:block;margin-top:2px}
+input{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.field{margin-bottom:14px}
+.go{width:100%;font:inherit;font-weight:600;font-size:1.05rem;padding:13px;border:0;border-radius:10px;background:var(--brand);color:#fff;cursor:pointer}
+.err{color:var(--red);font-size:.85rem;margin:6px 0 0;min-height:1.2em}
+#result{display:none;border-radius:12px;padding:16px;margin-top:14px;color:#fff;font-weight:600}
+#result.show{display:block}
+#result h2{margin:0 0 6px;font-size:1.15rem}
+#result p{margin:0;font-weight:500}
+#result .detail{margin-top:8px;font-size:.85rem;font-weight:400;opacity:.95}
+#result.green{background:var(--green)}
+#result.yellow{background:var(--yellow);color:var(--yellow-ink)}
+#result.red{background:var(--red)}
+#result.grey{background:#546e7a}
+.demo{font-size:.85rem}
+.demo summary{cursor:pointer;font-weight:600;color:var(--muted)}
+.demo .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.demo label{font-size:.8rem;font-weight:600}
+.disclaimer{font-size:.78rem;color:var(--muted);text-align:center;margin-top:6px}
+
+/* attention pop-up: bright orange, shakes once on open, no page dimming */
+#pop{position:fixed;left:50%;top:max(18px,env(safe-area-inset-top,0px));transform:translateX(-50%);
+  width:min(92vw,420px);background:var(--pop);color:#fff;border:4px solid var(--pop-border);
+  border-radius:14px;padding:16px;box-shadow:0 0 0 4px rgba(255,109,0,.35),0 10px 30px rgba(0,0,0,.3);
+  z-index:50;display:none}
+#pop.show{display:block;animation:shake .6s ease-in-out 1,glow 1.4s ease-in-out 3}
+#pop h3{margin:0 0 6px;font-size:1.2rem}
+#pop p{margin:0 0 12px;font-size:1rem}
+#pop button{font:inherit;font-weight:700;background:#fff;color:#b33c00;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+@keyframes shake{
+  0%,100%{transform:translateX(-50%)}
+  15%{transform:translateX(calc(-50% - 9px))} 30%{transform:translateX(calc(-50% + 9px))}
+  45%{transform:translateX(calc(-50% - 6px))} 60%{transform:translateX(calc(-50% + 6px))}
+  75%{transform:translateX(calc(-50% - 3px))} 90%{transform:translateX(calc(-50% + 3px))}
+}
+@keyframes glow{50%{box-shadow:0 0 0 10px rgba(255,109,0,.25),0 10px 30px rgba(0,0,0,.3)}}
+@media (prefers-reduced-motion:reduce){#pop.show{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>🌊 Assam Flood Early-Warning</h1>
+  <p class="sub">Prototype · Mathematical Modelling · linear model</p>
+  <p style="margin:0 0 14px;padding:8px 12px;border:2px solid var(--pop-border);border-radius:10px;font-size:.85rem"><b>Simulation only.</b> This prototype does not issue official flood warnings.</p>
+
+  <section class="card" aria-live="polite">
+    <div class="stats">
+      <div class="stat"><small>River level now</small><b id="lvl">–</b><span>metres</span></div>
+      <div class="stat"><small>Rain (this hour)</small><b id="rain">0.0</b><span>mm (shown only, not used yet)</span></div>
+    </div>
+    <p class="note"><span class="dot"></span><span id="note">Reading the saved CWC value.</span></p>
+    <p id="stale" role="status" style="display:none;margin:10px 0 0;padding:8px 12px;border-radius:10px;background:#ffc107;color:#1a1a1a;font-size:.85rem;font-weight:600"></p>
+  </section>
+
+  <section class="card viz">
+    <svg id="gauge" width="86" height="140" viewBox="0 0 86 140" role="img" aria-label="River water level graphic">
+      <rect x="14" y="6" width="58" height="126" rx="8" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <clipPath id="clip"><rect x="17" y="9" width="52" height="120" rx="6"/></clipPath>
+      <g clip-path="url(#clip)">
+        <rect id="water" x="17" y="129" width="52" height="0" fill="var(--water)" style="transition:all .8s ease"/>
+        <rect id="wave" x="17" y="129" width="52" height="4" fill="var(--water-deep)" opacity=".5" style="transition:all .8s ease"/>
+      </g>
+      <line x1="10" x2="76" y1="30" y2="30" stroke="#c62828" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="43" y="24" text-anchor="middle" font-size="9" fill="#c62828">danger</text>
+    </svg>
+    <p id="vizText">Type a river below to see its water level here.</p>
+  </section>
+
+  <section class="card">
+    <div class="field">
+      <label for="river">River name
+        <span class="hint">Please type the nearest river to get accurate information.</span></label>
+      <input id="river" list="rivers" placeholder="e.g. Brahmaputra" autocomplete="off" value="Brahmaputra">
+      <datalist id="rivers"></datalist>
+    </div>
+    <div class="field">
+      <label for="hours">How many hours ahead do you want to check the water level?
+        <span class="hint">Enter a number from 1 to 48.</span></label>
+      <input id="hours" type="number" inputmode="numeric" min="1" max="48" value="6">
+    </div>
+    <button class="go" id="calc">Calculate</button>
+    <p class="err" id="err" role="alert"></p>
+    <div id="result" role="status" aria-live="assertive"></div>
+  </section>
+
+  <details class="card demo" open>
+    <summary>Update the Brahmaputra reading (Guwahati, CWC)</summary>
+    <div class="row">
+      <div><label for="uLvl">Latest level (m)</label><input id="uLvl" type="number" step="0.01" placeholder="e.g. 49.12"></div>
+      <div><label for="uTrend">Trend (mm/hour, negative if falling), or leave empty</label><input id="uTrend" type="number" step="1" placeholder="e.g. 30"></div>
+    </div>
+    <div style="margin-top:10px"><label for="uWhen">Date and time of reading</label><input id="uWhen" type="datetime-local"></div>
+    <div class="row" style="margin-top:10px">
+      <div><label for="uLvl2">Earlier level (m), optional</label><input id="uLvl2" type="number" step="0.01" placeholder="e.g. 42.80"></div>
+      <div><label for="uWhen2">Earlier reading time</label><input id="uWhen2" type="datetime-local"></div>
+    </div>
+    <p class="hint" style="margin:8px 0 0">If you give an earlier reading, the page works out the trend itself: (latest level − earlier level) ÷ hours between them.</p>
+    <button class="go" id="uSave" style="margin-top:10px">Save reading</button>
+    <p class="err" id="uMsg" style="color:var(--muted)">Copy these from the CWC flood bulletin, station Guwahati (D.C. Court). Warning 48.68 m, danger 49.68 m.</p>
+  </details>
+
+  <details class="card demo">
+    <summary>Demo controls (to show judges all 3 alerts)</summary>
+    <div class="row">
+      <div><label for="dLvl">Set river level (m)</label><input id="dLvl" type="number" step="0.1" placeholder="e.g. 20.4"></div>
+      <div><label for="dRain">Set rain this hour (mm, display only)</label><input id="dRain" type="number" step="0.5" min="0" placeholder="e.g. 12"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button type="button" class="go" data-demo="green" style="background:var(--green);font-size:.9rem;padding:10px">Test green</button>
+      <button type="button" class="go" data-demo="yellow" style="background:var(--yellow);color:var(--yellow-ink);font-size:.9rem;padding:10px">Test yellow</button>
+      <button type="button" class="go" data-demo="red" style="background:var(--red);font-size:.9rem;padding:10px">Test red</button>
+    </div>
+  </details>
+
+  <details class="card demo">
+    <summary>Test against real CWC readings (small sample)</summary>
+    <div style="overflow-x:auto;margin-top:10px">
+      <table style="border-collapse:collapse;font-size:.8rem;min-width:420px">
+        <tr style="text-align:left"><th style="padding:4px 6px">Reading</th><th style="padding:4px 6px">Level</th><th style="padding:4px 6px">Trend</th><th style="padding:4px 6px">Predicted +24 h</th><th style="padding:4px 6px">Actual +24 h</th><th style="padding:4px 6px">Difference</th></tr>
+        <tr><td style="padding:4px 6px">1 Jul 2024, 14:00</td><td style="padding:4px 6px">49.12 m</td><td style="padding:4px 6px">+30 mm/h</td><td style="padding:4px 6px">49.84 m</td><td style="padding:4px 6px">50.40 m</td><td style="padding:4px 6px">actual higher by 0.56 m</td></tr>
+        <tr><td style="padding:4px 6px">2 Jul 2024, 14:00</td><td style="padding:4px 6px">50.40 m</td><td style="padding:4px 6px">+100 mm/h</td><td style="padding:4px 6px">52.80 m</td><td style="padding:4px 6px">50.83 m</td><td style="padding:4px 6px">predicted higher by 1.97 m</td></tr>
+      </table>
+    </div>
+    <p style="margin:10px 0 0;color:var(--muted)">Only 2 pairs, so this shows how the model behaves. It does not prove it is accurate. Takeaway: a straight-line forecast is rough over 24 hours, and a fast trend can overshoot. Source: CWC daily flood bulletins of 1 to 3 July 2024, Guwahati (D.C. Court). Values were read from the bulletin tables, so check them against the originals.</p>
+  </details>
+
+  <p class="disclaimer">Prototype for a school project. Always follow official alerts from ASDMA and CWC.</p>
+</main>
+
+<div id="pop" role="alertdialog" aria-labelledby="popT">
+  <h3 id="popT">⚠️ Flood risk possible!</h3>
+  <p>Elevated water-level risk detected. Check again with a higher number of hours, and check official flood advisories.</p>
+  <button id="popOk">OK, I’ll check again</button>
+</div>
+
+<script>
+/* Official CWC levels for the Brahmaputra at Guwahati; rise rate comes from the CWC trend.
+   level = current level (m), danger = danger level (m),
+   rate = rise rate (m/hour) from the CWC trend */
+const RIVERS = {
+  "Brahmaputra": {level:42.64, danger:49.68, warn:48.68, rate:0, trendKnown:false, real:true, site:"Guwahati (D.C. Court)", asOf:"13 Nov 2026, 1:00 pm (CWC forecasting site; trend falling, rate not shown, so 0 is used)", ts:Date.UTC(2026,10,13,7,30)},
+};
+const WARN_MARGIN = 1.0; // demo rivers only: warning level = danger minus 1 m
+const warnOf = r => (r.warn !== undefined ? r.warn : r.danger - WARN_MARGIN);
+const STALE_HOURS = 24; // a reading older than this is flagged as outdated
+const LEVEL_MIN = 40, LEVEL_MAX = 55; // plausible range for Brahmaputra at Guwahati (m)
+const TREND_MAX = 500, TREND_ODD = 150; // mm/hour: reject above MAX, flag above ODD
+const ageHours = r => r.ts ? (Date.now() - r.ts) / 3600000 : null;
+function staleText(r){
+  const a = ageHours(r);
+  if (a === null || a <= STALE_HOURS) return "";
+  const d = Math.floor(a / 24);
+  return "⚠️ This reading is " + (d >= 1 ? d + " day" + (d > 1 ? "s" : "") : Math.round(a) + " hours") + " old, so the prediction may be unreliable. Update it from the latest CWC bulletin.";
+}
+const $ = id => document.getElementById(id);
+const dl = $("rivers");
+Object.keys(RIVERS).forEach(n => { const o=document.createElement("option"); o.value=n; dl.appendChild(o); });
+
+let current = null, rainNow = 0, demoRate = null;
+
+function findRiver(txt){
+  const t = txt.trim().toLowerCase();
+  return Object.keys(RIVERS).find(n => n.toLowerCase() === t) || null;
+}
+function levelNow(name){
+  const v = parseFloat($("dLvl").value);
+  return isNaN(v) || v < 0 ? RIVERS[name].level : v;
+}
+function rainValue(){
+  const v = parseFloat($("dRain").value);
+  return isNaN(v) || v < 0 ? 0 : v;
+}
+function drawGauge(name){
+  const r = RIVERS[name], lv = levelNow(name);
+  // map: danger level sits at the dashed line (y=30); 4 m below danger is the tank bottom (y=129)
+  const span = 4, top = 30, bottom = 129;
+  let frac = 1 - (r.danger - lv) / span; frac = Math.max(0.02, Math.min(1.05, frac));
+  const h = Math.min(bottom - 9, (bottom - top) * frac);
+  $("water").setAttribute("y", bottom - h); $("water").setAttribute("height", h);
+  $("wave").setAttribute("y", bottom - h);
+  $("lvl").textContent = lv.toFixed(2);
+  $("vizText").textContent = name + ": " + lv.toFixed(2) + " m now. Danger level is " + r.danger.toFixed(2) + " m.";
+}
+function refresh(){
+  rainNow = rainValue(); $("rain").textContent = rainNow.toFixed(1);
+  const n = findRiver($("river").value);
+  if (n){ current = n; drawGauge(n); const rv = RIVERS[n]; $("note").textContent = rv.real ? ("CWC gauge: " + n + " at " + rv.site + ". Reading as of " + rv.asOf + ". Update it from the latest CWC bulletin below.") : ("Demo values for " + n + ". Not real gauge data."); }
+  else { current = null; $("lvl").textContent = "–"; $("water").setAttribute("height", 0); $("wave").setAttribute("y", 129); $("vizText").textContent = "River not recognised. Choose one from the list."; $("note").textContent = "No river selected."; }
+  const sb = $("stale"), rb = RIVERS["Brahmaputra"], st = (n && rb.real) ? staleText(rb) : "";
+  sb.textContent = st; sb.style.display = st ? "block" : "none";
+}
+["river","dLvl","dRain"].forEach(id => $(id).addEventListener("input", refresh));
+
+function notify(msg){
+  try{
+    if ("Notification" in window){
+      const send = () => new Notification("🔴 Simulation Flood Alert", {body: msg, requireInteraction:true});
+      if (Notification.permission === "granted") send();
+      else if (Notification.permission !== "denied") Notification.requestPermission().then(p => { if (p==="granted") send(); });
+    }
+  }catch(e){}
+  try{ if (navigator.vibrate) navigator.vibrate([300,150,300,150,600]); }catch(e){}
+}
+function showPop(){
+  const p = $("pop"); p.classList.remove("show"); void p.offsetWidth; p.classList.add("show");
+  try{ if (navigator.vibrate) navigator.vibrate([120,60,120]); }catch(e){}
+}
+$("popOk").addEventListener("click", () => $("pop").classList.remove("show"));
+
+$("calc").addEventListener("click", () => {
+  const err = $("err"), res = $("result"); err.textContent = ""; res.className = ""; $("pop").classList.remove("show");
+  const name = findRiver($("river").value);
+  if (!name){ err.textContent = "This prototype supports only the Brahmaputra (Guwahati gauge). Type: Brahmaputra."; return; }
+  const h = $("hours").value.trim() === "" ? NaN : Number($("hours").value);
+  if (!Number.isInteger(h) || h < 1 || h > 48){ err.textContent = "Enter a whole number of hours from 1 to 48."; return; }
+  const dRainV = parseFloat($("dRain").value), dLvlV = parseFloat($("dLvl").value);
+  if (!isNaN(dRainV) && dRainV < 0){ err.textContent = "Rainfall cannot be negative."; return; }
+  if (!isNaN(dLvlV) && dLvlV < 0){ err.textContent = "A river level cannot be negative."; return; }
+  refresh();
+  const r = RIVERS[name], now = levelNow(name);
+  // linear model: level(h) = now + rate × h  (rate from the CWC trend; rainfall is not used)
+  const rate = demoRate !== null ? demoRate : r.rate;
+  const predicted = now + rate * h;
+  const peak = Math.max(now, predicted); // judge by the higher of the current and predicted level
+  const margin = r.danger - peak;
+  const nowNote = now >= r.danger ? " The river is already above the danger level now." : (now >= warnOf(r) ? " The river is already above the warning level now." : "");
+  const info = "Predicted level in " + h + " hour" + (h>1?"s":"") + ": " + predicted.toFixed(2) + " m (warning level " + warnOf(r).toFixed(2) + " m, danger level " + r.danger.toFixed(2) + " m).";
+  const dvv = parseFloat($("dLvl").value);
+  const isStale = r.real && !(dvv >= 0) && !!staleText(r);
+  let cls, title, msg;
+  if (isStale){
+    cls="grey"; title="⚪ Reading too old to judge";
+    msg="The saved CWC reading is outdated, so no prediction or alert is shown. Update the reading from the latest CWC bulletin or forecasting site.";
+  } else if (margin <= 0){
+    cls="red"; title="🔴 Flood danger";
+    msg="Pack your essentials and move to higher ground now. A flood is approaching. Warn the people around you.";
+    notify("SIMULATION: flood approaching near the " + name + ". Pack essentials and move to higher ground now. Warn others.");
+  } else if (peak >= warnOf(r)){
+    cls="yellow"; title="🟡 Risk of rising water";
+    msg="The river may get close to the danger level. Check again with a higher number of hours to be sure.";
+    showPop();
+  } else {
+    cls="green"; title="🟢 No threshold crossing predicted";
+    msg="The river is not predicted to reach the warning level in this time. This is an estimate, not a guarantee. Keep following official CWC and ASDMA updates.";
+    const dv = parseFloat($("dLvl").value);
+    if (r.real && !(dv >= 0) && staleText(r)){ cls="grey"; title="⚪ Reading too old to judge"; msg="The saved CWC reading is outdated, so no prediction can be trusted. Update the reading from the latest CWC bulletin."; }
+  }
+  res.className = "show " + cls;
+  const demoOn = !isNaN(parseFloat($("dLvl").value)) && parseFloat($("dLvl").value) >= 0;
+  const stale = r.real ? staleText(r) : "";
+  const demoNote = demoOn ? "🧪 Demo level in use (" + now.toFixed(2) + " m). This is a test value, not a real reading." + (demoRate !== null ? " Demo rise rate: " + (demoRate * 1000).toFixed(0) + " mm/hour." : "") : "";
+  const readingNote = r.real ? "Saved CWC reading: " + r.level.toFixed(2) + " m, as of " + r.asOf + "." + (r.trendKnown === false && demoRate === null ? " Trend unknown, so the river is assumed steady." : "") : "";
+  res.innerHTML = "<h2>"+title+"</h2><p>"+msg+(isStale ? "" : nowNote)+"</p><p class='detail'>"+info+"</p>"
+    + (demoNote ? "<p class='detail'>"+demoNote+"</p>" : "")
+    + (readingNote ? "<p class='detail'>"+readingNote+"</p>" : "")
+    + (stale ? "<p class='detail'>"+stale+"</p>" : "")
+    + "<p class='detail'>Simplified scenario: assumes the current CWC trend continues for the whole period. Rainfall is not used in the prediction. Not yet validated against past floods.</p>";
+  res.scrollIntoView({behavior:"smooth", block:"nearest"});
+});
+$("uSave").addEventListener("click", () => {
+  const lv = parseFloat($("uLvl").value), when = $("uWhen").value.trim();
+  let tr = parseFloat($("uTrend").value);
+  const b = RIVERS["Brahmaputra"];
+  if (isNaN(lv)){ $("uMsg").textContent = "Enter the water level in metres."; return; }
+  if (lv < LEVEL_MIN || lv > LEVEL_MAX){ $("uMsg").textContent = "That level looks wrong for the Brahmaputra at Guwahati (expected about " + LEVEL_MIN + " to " + LEVEL_MAX + " m). Check the bulletin and try again."; return; }
+  if (!when){ $("uMsg").textContent = "Pick the date and time of the reading."; return; }
+  const lv2 = parseFloat($("uLvl2").value), when2 = $("uWhen2").value.trim();
+  if (!isNaN(lv2) && when2){
+    const hrs = (new Date(when).getTime() - new Date(when2).getTime()) / 3600000;
+    if (isNaN(hrs) || hrs <= 0 || hrs > 48){ $("uMsg").textContent = "The earlier reading must be between 0 and 48 hours before the latest one."; return; }
+    if (lv2 < LEVEL_MIN || lv2 > LEVEL_MAX){ $("uMsg").textContent = "The earlier level looks wrong for this gauge. Check it and try again."; return; }
+    tr = (lv - lv2) / hrs * 1000;
+  }
+  const trendKnown = !isNaN(tr);
+  if (!trendKnown) tr = 0;
+  if (Math.abs(tr) > TREND_MAX){ $("uMsg").textContent = "A trend above " + TREND_MAX + " mm/hour is not realistic. Check the bulletin and try again."; return; }
+  const ts = new Date(when).getTime();
+  if (!when || isNaN(ts)){ $("uMsg").textContent = "Pick the date and time of the reading."; return; }
+  if (ts > Date.now() + 3600000){ $("uMsg").textContent = "That time is in the future. Check the date and time."; return; }
+  b.level = lv; b.rate = tr / 1000; b.trendKnown = trendKnown; b.ts = ts;
+  b.asOf = new Date(ts).toLocaleString([], {day:"numeric", month:"short", year:"numeric", hour:"numeric", minute:"2-digit"});
+  let flag = "";
+  if (!trendKnown) flag += " Trend unknown: the page assumes the river is steady. Add an earlier reading to work out the trend.";
+  if (lv > 51.46) flag += " Note: this is above the record flood level (51.46 m). Double-check the bulletin.";
+  if (!isNaN(tr) && Math.abs(tr) > TREND_ODD) flag += " Note: a trend above " + TREND_ODD + " mm/hour is unusual. Double-check it.";
+  $("dLvl").value = ""; demoRate = null; // a freshly saved reading replaces any demo level
+  try{ localStorage.setItem("brahmaputraReading", JSON.stringify({level:b.level, rate:b.rate, trendKnown:b.trendKnown, ts:b.ts, asOf:b.asOf})); }catch(e){}
+  $("uMsg").textContent = "Saved on this device. Brahmaputra at Guwahati is now " + lv.toFixed(2) + " m." + flag;
+  $("river").value = "Brahmaputra"; refresh();
+});
+const DEMOS = {green:{lvl:47.5, h:6}, yellow:{lvl:48.5, h:12}, red:{lvl:49.5, h:12}};
+document.querySelectorAll("[data-demo]").forEach(btn => btn.addEventListener("click", () => {
+  const d = DEMOS[btn.dataset.demo];
+  $("river").value = "Brahmaputra"; $("dLvl").value = d.lvl; $("hours").value = d.h; demoRate = 0.03;
+  refresh(); $("calc").click();
+}));
+$("dLvl").addEventListener("input", () => { demoRate = null; });
+try{
+  const saved = JSON.parse(localStorage.getItem("brahmaputraReading") || "null");
+  if (saved && Number.isFinite(saved.level) && Number.isFinite(saved.rate) && Number.isFinite(saved.ts) && typeof saved.asOf === "string" && saved.ts <= Date.now() + 3600000 && saved.level >= LEVEL_MIN && saved.level <= LEVEL_MAX && Math.abs(saved.rate * 1000) <= TREND_MAX){
+    const b = RIVERS["Brahmaputra"]; b.level = saved.level; b.rate = saved.rate; b.trendKnown = saved.trendKnown !== false; b.ts = saved.ts; b.asOf = saved.asOf;
+  }
+}catch(e){}
+refresh();
+</script>
+</body>
+</html>
