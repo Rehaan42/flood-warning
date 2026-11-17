@@ -157,15 +157,16 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--brand);outline-
   </details>
 
   <details class="card demo">
-    <summary>Test against real CWC readings (small sample)</summary>
+    <summary>Past tests against real CWC readings (small sample)</summary>
     <div style="overflow-x:auto;margin-top:10px">
       <table style="border-collapse:collapse;font-size:.8rem;min-width:420px">
-        <tr style="text-align:left"><th style="padding:4px 6px">Reading</th><th style="padding:4px 6px">Level</th><th style="padding:4px 6px">Trend</th><th style="padding:4px 6px">Predicted +24 h</th><th style="padding:4px 6px">Actual +24 h</th><th style="padding:4px 6px">Difference</th></tr>
-        <tr><td style="padding:4px 6px">1 Jul 2024, 14:00</td><td style="padding:4px 6px">49.12 m</td><td style="padding:4px 6px">+30 mm/h</td><td style="padding:4px 6px">49.84 m</td><td style="padding:4px 6px">50.40 m</td><td style="padding:4px 6px">actual higher by 0.56 m</td></tr>
-        <tr><td style="padding:4px 6px">2 Jul 2024, 14:00</td><td style="padding:4px 6px">50.40 m</td><td style="padding:4px 6px">+100 mm/h</td><td style="padding:4px 6px">52.80 m</td><td style="padding:4px 6px">50.83 m</td><td style="padding:4px 6px">predicted higher by 1.97 m</td></tr>
+        <tr style="text-align:left"><th style="padding:4px 6px">Reading</th><th style="padding:4px 6px">Level</th><th style="padding:4px 6px">Trend</th><th style="padding:4px 6px">Predicted later</th><th style="padding:4px 6px">Actual later</th><th style="padding:4px 6px">Difference</th></tr>
+        <tr><td style="padding:4px 6px">1 Jul 2024, 14:00<br>(+24 h)</td><td style="padding:4px 6px">49.12 m</td><td style="padding:4px 6px">+30 mm/h</td><td style="padding:4px 6px">49.84 m</td><td style="padding:4px 6px">50.40 m</td><td style="padding:4px 6px">actual higher by 0.56 m</td></tr>
+        <tr><td style="padding:4px 6px">2 Jul 2024, 14:00<br>(+24 h)</td><td style="padding:4px 6px">50.40 m</td><td style="padding:4px 6px">+100 mm/h</td><td style="padding:4px 6px">52.80 m</td><td style="padding:4px 6px">50.83 m</td><td style="padding:4px 6px">predicted higher by 1.97 m</td></tr>
+        <tr><td style="padding:4px 6px">13 Nov 2026, 13:00<br>(+72 h)</td><td style="padding:4px 6px">42.64 m</td><td style="padding:4px 6px">unknown, assumed 0</td><td style="padding:4px 6px">42.64 m</td><td style="padding:4px 6px">42.47 m</td><td style="padding:4px 6px">predicted higher by 0.17 m</td></tr>
       </table>
     </div>
-    <p style="margin:10px 0 0;color:var(--muted)">Only 2 pairs, so this shows how the model behaves. It does not prove it is accurate. Takeaway: a straight-line forecast is rough over 24 hours, and a fast trend can overshoot. Source: CWC daily flood bulletins of 1 to 3 July 2024, Guwahati (D.C. Court). Values were read from the bulletin tables, so check them against the originals.</p>
+    <p style="margin:10px 0 0;color:var(--muted)">Only 3 pairs, so this shows how the model behaves. It does not prove it is accurate. Rows 1 and 2: a straight-line forecast is rough over 24 hours, and a fast trend can overshoot. Row 3 (2026) used a 72-hour gap with the trend unknown, so the river was assumed steady. The river was calm and falling slowly, so the error was small. Sources: CWC daily flood bulletins of 1 to 3 July 2024 (values read from the tables, so check them against the originals), and the CWC forecasting site station panel for 13 and 16 Nov 2026.</p>
   </details>
 
   <p class="disclaimer">Prototype for a school project. Always follow official alerts from ASDMA and CWC.</p>
@@ -182,7 +183,7 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--brand);outline-
    level = current level (m), danger = danger level (m),
    rate = rise rate (m/hour) from the CWC trend */
 const RIVERS = {
-  "Brahmaputra": {level:42.64, danger:49.68, warn:48.68, rate:0, trendKnown:false, real:true, site:"Guwahati (D.C. Court)", asOf:"13 Nov 2026, 1:00 pm (CWC forecasting site; trend falling, rate not shown, so 0 is used)", ts:Date.UTC(2026,10,13,7,30)},
+  "Brahmaputra": {level:42.47, danger:49.68, warn:48.68, rate:-0.00236, trendKnown:true, real:true, site:"Guwahati (D.C. Court)", asOf:"16 Nov 2026, 1:00 pm (CWC forecasting site; trend worked out from the 13 Nov reading, about -2.4 mm/hour)", ts:Date.UTC(2026,10,16,7,30)},
 };
 const WARN_MARGIN = 1.0; // demo rivers only: warning level = danger minus 1 m
 const warnOf = r => (r.warn !== undefined ? r.warn : r.danger - WARN_MARGIN);
